@@ -74,7 +74,7 @@ namespace CityBuilder
             {
                 cameraRig.Active = false;
                 playerCharacter.Active = true;
-                playerHand.mainCamera = playerCharacter.camera;
+                playerHand.mainCamera = playerCharacter.playerCamera;
             }
 
             inputSystem.UpdateInput();

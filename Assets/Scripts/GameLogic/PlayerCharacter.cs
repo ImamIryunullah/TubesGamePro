@@ -6,15 +6,18 @@ public class PlayerCharacter : MonoBehaviour
 {
     public float speed = 1.5f;
 
-    public Camera camera;
+    public Camera playerCamera;
+    public Animator anim;
 
     public float sensitivity = 5f;
     public float headMinY = -40f;
     public float headMaxY = 40f;
 
     public KeyCode jumpButton = KeyCode.Space;
-    public float jumpForce = 0.025f;
-    public float jumpDistance = 0.025f;
+    public float jumpForce = 3f;
+    public float jumpDistance = 0.25f;
+
+    public float rotationSpeed = 120f;   // ← dari PlayerController
 
     private Vector3 direction;
     private float h, v;
@@ -26,21 +29,35 @@ public class PlayerCharacter : MonoBehaviour
     {
         body = GetComponent<Rigidbody>();
         body.freezeRotation = true;
-        layerMask = 1 << gameObject.layer | 1 << 2;
+
+        anim = GetComponent<Animator>();
+
+        layerMask = (1 << gameObject.layer) | (1 << 2);
         layerMask = ~layerMask;
     }
 
     void FixedUpdate()
     {
+        // Movement physics
         body.AddForce(direction * speed, ForceMode.VelocityChange);
 
-        if (Mathf.Abs(body.velocity.x) > speed)
+        // Clamp velocity
+        if (Mathf.Abs(body.linearVelocity.x) > speed)
         {
-            body.velocity = new Vector3(Mathf.Sign(body.velocity.x) * speed, body.velocity.y, body.velocity.z);
+            body.linearVelocity = new Vector3(
+                Mathf.Sign(body.linearVelocity.x) * speed,
+                body.linearVelocity.y,
+                body.linearVelocity.z
+            );
         }
-        if (Mathf.Abs(body.velocity.z) > speed)
+
+        if (Mathf.Abs(body.linearVelocity.z) > speed)
         {
-            body.velocity = new Vector3(body.velocity.x, body.velocity.y, Mathf.Sign(body.velocity.z) * speed);
+            body.linearVelocity = new Vector3(
+                body.linearVelocity.x,
+                body.linearVelocity.y,
+                Mathf.Sign(body.linearVelocity.z) * speed
+            );
         }
     }
 
@@ -48,44 +65,64 @@ public class PlayerCharacter : MonoBehaviour
     {
         RaycastHit hit;
         Ray ray = new Ray(transform.position, Vector3.down);
+
         if (Physics.Raycast(ray, out hit, jumpDistance, layerMask))
         {
             return true;
         }
-
         return false;
     }
 
     void Update()
     {
+        // Input
         h = Input.GetAxis("Horizontal");
         v = Input.GetAxis("Vertical");
 
-        float rotationX = camera.transform.localEulerAngles.y + Input.GetAxis("Mouse X") * sensitivity;
+        anim.SetBool("isWalking", (h != 0 || v != 0));
+
+        // ------------------------------ 
+        // 🔥 Player Rotation (from PlayerController)
+        // ------------------------------ 
+        float turn = h * rotationSpeed * Time.deltaTime;
+        transform.Rotate(0, turn, 0);
+
+        // ------------------------------ 
+        // 🔥 Camera Rotation (your FPS camera)
+        // ------------------------------
+        float rotationX = playerCamera.transform.localEulerAngles.y +
+                          Input.GetAxis("Mouse X") * sensitivity;
+
         rotationY += Input.GetAxis("Mouse Y") * sensitivity;
         rotationY = Mathf.Clamp(rotationY, headMinY, headMaxY);
-        camera.transform.localEulerAngles = new Vector3(-rotationY, rotationX, 0);
 
-        direction = new Vector3(h, 0, v);
-        direction = camera.transform.TransformDirection(direction);
-        direction = new Vector3(direction.x, 0, direction.z);
+        playerCamera.transform.localEulerAngles =
+            new Vector3(-rotationY, rotationX, 0);
 
+        // ------------------------------ 
+        // 🔥 Movement Direction (PlayerController style)
+        // W/S = maju/mundur mengikuti arah badan
+        // ------------------------------
+        direction = transform.forward * v;
+
+        // Jump
         if (Input.GetKeyDown(jumpButton) && GetJump())
         {
-            body.velocity = new Vector2(0, jumpForce);
+            Vector3 newVel = body.linearVelocity;
+            newVel.y = jumpForce;
+            body.linearVelocity = newVel;
+
+            anim.SetTrigger("jump");
         }
     }
 
     public bool Active
     {
-        get
-        {
-            return camera.enabled;
-        }
+        get { return playerCamera.enabled; }
         set
         {
-            gameObject.SetActive(value);
-            camera.enabled = value;
+            playerCamera.enabled = value;
+            this.enabled = value;
         }
     }
 
