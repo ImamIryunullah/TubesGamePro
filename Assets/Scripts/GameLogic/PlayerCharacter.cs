@@ -34,13 +34,13 @@ public class PlayerCharacter : MonoBehaviour
     {
         body.AddForce(direction * speed, ForceMode.VelocityChange);
 
-        if (Mathf.Abs(body.velocity.x) > speed)
+        if (Mathf.Abs(body.linearVelocity.x) > speed)
         {
-            body.velocity = new Vector3(Mathf.Sign(body.velocity.x) * speed, body.velocity.y, body.velocity.z);
+            body.linearVelocity = new Vector3(Mathf.Sign(body.linearVelocity.x) * speed, body.linearVelocity.y, body.linearVelocity.z);
         }
-        if (Mathf.Abs(body.velocity.z) > speed)
+        if (Mathf.Abs(body.linearVelocity.z) > speed)
         {
-            body.velocity = new Vector3(body.velocity.x, body.velocity.y, Mathf.Sign(body.velocity.z) * speed);
+            body.linearVelocity = new Vector3(body.linearVelocity.x, body.linearVelocity.y, Mathf.Sign(body.linearVelocity.z) * speed);
         }
     }
 
@@ -72,7 +72,7 @@ public class PlayerCharacter : MonoBehaviour
 
         if (Input.GetKeyDown(jumpButton) && GetJump())
         {
-            body.velocity = new Vector2(0, jumpForce);
+            body.linearVelocity = new Vector2(0, jumpForce);
         }
     }
 
