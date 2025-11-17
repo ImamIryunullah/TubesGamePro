@@ -4,116 +4,126 @@
 [RequireComponent(typeof(CapsuleCollider))]
 public class PlayerCharacter : MonoBehaviour
 {
-    public float speed = 1.5f;
+    [Header("Movement Settings")]
+    public float speed = 5.0f;
+    public float jumpForce = 4.0f; // Kekuatan loncat (sesuaikan jika kurang tinggi)
 
+    [Tooltip("Jarak deteksi tanah. Jika karakter melayang, naikkan sedikit.")]
+    public float jumpCheckDistance = 0.3f;
+
+    [Header("Mouse Settings")]
+    public float mouseSensitivity = 3.0f;
+    public float headMinY = -80f;
+    public float headMaxY = 80f;
+
+    [Header("References")]
     public Camera playerCamera;
     public Animator anim;
 
-    public float sensitivity = 5f;
-    public float headMinY = -40f;
-    public float headMaxY = 40f;
-
-    public KeyCode jumpButton = KeyCode.Space;
-    public float jumpForce = 3f;
-    public float jumpDistance = 0.25f;
-
-    public float rotationSpeed = 120f;   // ← dari PlayerController
-
+    private Rigidbody body;
     private Vector3 direction;
     private float h, v;
     private int layerMask;
-    private Rigidbody body;
-    private float rotationY;
+    private float rotationY = 0f;
+
+    // --- ANTI DOUBLE JUMP VARS ---
+    private float jumpCooldown = 0.5f; // Jeda 0.5 detik sebelum bisa loncat lagi
+    private float lastJumpTime = 0f;
 
     void Start()
     {
         body = GetComponent<Rigidbody>();
         body.freezeRotation = true;
 
-        anim = GetComponent<Animator>();
+        // Kunci kursor mouse
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
 
-        layerMask = (1 << gameObject.layer) | (1 << 2);
-        layerMask = ~layerMask;
-    }
+        if (anim == null) anim = GetComponent<Animator>();
 
-    void FixedUpdate()
-    {
-        // Movement physics
-        body.AddForce(direction * speed, ForceMode.VelocityChange);
-
-        // Clamp velocity
-        if (Mathf.Abs(body.linearVelocity.x) > speed)
-        {
-            body.linearVelocity = new Vector3(
-                Mathf.Sign(body.linearVelocity.x) * speed,
-                body.linearVelocity.y,
-                body.linearVelocity.z
-            );
-        }
-
-        if (Mathf.Abs(body.linearVelocity.z) > speed)
-        {
-            body.linearVelocity = new Vector3(
-                body.linearVelocity.x,
-                body.linearVelocity.y,
-                Mathf.Sign(body.linearVelocity.z) * speed
-            );
-        }
-    }
-
-    bool GetJump()
-    {
-        RaycastHit hit;
-        Ray ray = new Ray(transform.position, Vector3.down);
-
-        if (Physics.Raycast(ray, out hit, jumpDistance, layerMask))
-        {
-            return true;
-        }
-        return false;
+        // Layer mask: Ignore layer 'Ignore Raycast' (2) dan layer Player itu sendiri
+        // Agar raycast tidak mendeteksi badan sendiri sebagai tanah
+        int playerLayer = gameObject.layer;
+        layerMask = ~(1 << playerLayer | 1 << 2);
     }
 
     void Update()
     {
-        // Input
+        // 1. INPUT
         h = Input.GetAxis("Horizontal");
         v = Input.GetAxis("Vertical");
 
-        anim.SetBool("isWalking", (h != 0 || v != 0));
+        if (anim != null)
+        {
+            anim.SetBool("isWalking", (h != 0 || v != 0));
+        }
 
-        // ------------------------------ 
-        // 🔥 Player Rotation (from PlayerController)
-        // ------------------------------ 
-        float turn = h * rotationSpeed * Time.deltaTime;
-        transform.Rotate(0, turn, 0);
+        // 2. ROTASI BADAN (Mouse X)
+        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
+        transform.Rotate(Vector3.up * mouseX);
 
-        // ------------------------------ 
-        // 🔥 Camera Rotation (your FPS camera)
-        // ------------------------------
-        float rotationX = playerCamera.transform.localEulerAngles.y +
-                          Input.GetAxis("Mouse X") * sensitivity;
-
-        rotationY += Input.GetAxis("Mouse Y") * sensitivity;
+        // 3. ROTASI KAMERA (Mouse Y)
+        rotationY += Input.GetAxis("Mouse Y") * mouseSensitivity;
         rotationY = Mathf.Clamp(rotationY, headMinY, headMaxY);
 
-        playerCamera.transform.localEulerAngles =
-            new Vector3(-rotationY, rotationX, 0);
-
-        // ------------------------------ 
-        // 🔥 Movement Direction (PlayerController style)
-        // W/S = maju/mundur mengikuti arah badan
-        // ------------------------------
-        direction = transform.forward * v;
-
-        // Jump
-        if (Input.GetKeyDown(jumpButton) && GetJump())
+        if (playerCamera != null)
         {
-            Vector3 newVel = body.linearVelocity;
-            newVel.y = jumpForce;
-            body.linearVelocity = newVel;
-
-            anim.SetTrigger("jump");
+            playerCamera.transform.localEulerAngles = new Vector3(-rotationY, 0f, 0f);
         }
+
+        // 4. PERGERAKAN (FPS Style: W selalu maju ke arah pandang)
+        direction = (transform.forward * v) + (transform.right * h);
+        if (direction.magnitude > 1) direction.Normalize();
+
+        // 5. LOGIKA LOMPAT
+        // Syarat: Tombol Spasi + Menyentuh Tanah + Cooldown selesai
+        if (Input.GetKeyDown(KeyCode.Space) && IsGrounded() && Time.time > lastJumpTime + jumpCooldown)
+        {
+            DoJump();
+        }
+    }
+
+    void FixedUpdate()
+    {
+        // Menggerakkan player via Velocity (Unity 6 compatible)
+        Vector3 targetVelocity = direction * speed;
+
+        // Penting: Kita ambil Y (naik/turun) yang sedang terjadi agar gravitasi tetap jalan
+        float currentVerticalSpeed = body.linearVelocity.y;
+
+        // Gabungkan kecepatan jalan (X, Z) dengan kecepatan jatuh/lompat (Y)
+        body.linearVelocity = new Vector3(targetVelocity.x, currentVerticalSpeed, targetVelocity.z);
+    }
+
+    void DoJump()
+    {
+        // Ambil velocity saat ini
+        Vector3 vel = body.linearVelocity;
+
+        // KITA PAKSA kecepatan Y (naik) menjadi sesuai JumpForce.
+        // Tidak peduli seberapa berat (Mass) karakternya, dia akan naik dengan kecepatan ini.
+        vel.y = jumpForce;
+
+        // Terapkan kembali
+        body.linearVelocity = vel;
+
+        // Catat waktu lompat
+        lastJumpTime = Time.time;
+
+        if (anim != null) anim.SetTrigger("jump");
+    }
+
+    // Logika cek tanah yang LEBIH KUAT
+    bool IsGrounded()
+    {
+        // Kita tembak Raycast dari sedikit di ATAS kaki (0.1f) ke arah BAWAH
+        // Ini mencegah raycast gagal deteksi kalau pivot point tenggelam sedikit ke lantai
+        Vector3 origin = transform.position + (Vector3.up * 0.1f);
+
+        // Visualisasi garis merah di Scene view (untuk debug)
+        Debug.DrawRay(origin, Vector3.down * jumpCheckDistance, Color.red);
+
+        return Physics.Raycast(origin, Vector3.down, jumpCheckDistance, layerMask);
     }
 
     public bool Active
@@ -123,12 +133,11 @@ public class PlayerCharacter : MonoBehaviour
         {
             playerCamera.enabled = value;
             this.enabled = value;
+            if (!value)
+            {
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
+            }
         }
-    }
-
-    void OnDrawGizmosSelected()
-    {
-        Gizmos.color = Color.red;
-        Gizmos.DrawRay(transform.position, Vector3.down * jumpDistance);
     }
 }

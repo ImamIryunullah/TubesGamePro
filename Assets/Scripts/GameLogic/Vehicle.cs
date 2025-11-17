@@ -71,7 +71,7 @@ namespace CityBuilder
 
         [System.Obsolete]
         private void FixedUpdate()
-        {            
+        {
             switch (m_state)
             {
                 case AIState.Looking:
@@ -197,7 +197,7 @@ namespace CityBuilder
         {
             int[] closest = GetClosest<VehiclesManager, Vehicle>(VehiclesManager.Ref, m_minDistNearestVehicle);
             int indexClosest = closest.BitPos();
-            while (indexClosest != Extensions.NULL) 
+            while (indexClosest != Extensions.NULL)
             {
                 Vehicle closestVehicle = VehiclesManager.Ref[indexClosest];
                 float trgt = Vector3.Dot((m_pointTarget.transform.position - transform.position).normalized, transform.right);
@@ -278,7 +278,7 @@ namespace CityBuilder
             m_pointTarget = closestRoad.GetClosestPoint(transform.position, float.MaxValue);
             if (m_pointTarget == null) return false;
 
-            if(m_pointTarget.connectedPoints.Length == 0)
+            if (m_pointTarget.connectedPoints.Length == 0)
                 m_pointTarget = closestRoad.GetClosestPoint(transform.position, m_pointTarget, float.MaxValue);
 
             return !(m_pointTarget == null);
