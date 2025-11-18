@@ -6,6 +6,10 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/Scene.unity
+    path: Assets/Scenes/IntroStory.unity
+    guid: 5d767c7810bdc394d9cd4f52409ecfd7
+  - enabled: 1
+    path: Assets/Scenes/Walikota.unity
     guid: 9fc0d4010bbf28b4594072e72b8655ab
   m_configObjects: {}
+  m_UseUCBPForAssetBundles: 0
