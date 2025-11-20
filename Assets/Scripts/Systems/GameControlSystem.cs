@@ -74,7 +74,7 @@ namespace CityBuilder
             {
                 cameraRig.Active = false;
                 playerCharacter.Active = true;
-                playerHand.mainCamera = playerCharacter.camera;
+                playerHand.mainCamera = playerCharacter.playerCamera;
             }
 
             inputSystem.UpdateInput();
@@ -264,7 +264,7 @@ namespace CityBuilder
 
             bool isMousePan = false;
             if (mouseInput.actionType != InputSystem.ActionType.UI
-                && mouseInput.dragStartPosition != null 
+                && mouseInput.dragStartPosition != null
                 && inputSystem.GetButtonState(KeyCode.Mouse1) == InputSystem.ButtonState.isHeldDown)
                 isMousePan = true;
 
@@ -291,7 +291,7 @@ namespace CityBuilder
                 panAxis.y = Mathf.Clamp(axisUp - axisDown, -1, 1);
                 cameraRig.Pan(panAxis);
             }
-            else if(isMousePan)
+            else if (isMousePan)
             {
                 float mouseDeltaX = inputSystem.GetMouseInput().currentScreenPosition.x - inputSystem.GetMouseInput().dragStartPosition.Value.x;
                 float mouseDeltaY = inputSystem.GetMouseInput().currentScreenPosition.y - inputSystem.GetMouseInput().dragStartPosition.Value.y;
@@ -314,36 +314,36 @@ namespace CityBuilder
             switch (structureToBuild.descriptor.category)
             {
                 case BuildingDescriptor.Category.Building:
-                {
-                    if (inputSystem.GetButtonState(KeyCode.Mouse0) == InputSystem.ButtonState.wasJustPressed && isConstructionAvailable)
                     {
-                        CreateStructure(structureToBuild, playerHand.GridPosition);
-                        GridUpdateEvent();
+                        if (inputSystem.GetButtonState(KeyCode.Mouse0) == InputSystem.ButtonState.wasJustPressed && isConstructionAvailable)
+                        {
+                            CreateStructure(structureToBuild, playerHand.GridPosition);
+                            GridUpdateEvent();
+                        }
+                        break;
                     }
-                    break;
-                }
 
                 case BuildingDescriptor.Category.Roadway:
                 case BuildingDescriptor.Category.PowerLine:
                 case BuildingDescriptor.Category.Aqueduct:
-                {
-                    if (inputSystem.GetButtonState(KeyCode.Mouse0) == InputSystem.ButtonState.wasJustPressed && isConstructionAvailable)
                     {
-                        CreateStructure(structureToBuild, playerHand.GridPosition);
-                        GridUpdateEvent();
+                        if (inputSystem.GetButtonState(KeyCode.Mouse0) == InputSystem.ButtonState.wasJustPressed && isConstructionAvailable)
+                        {
+                            CreateStructure(structureToBuild, playerHand.GridPosition);
+                            GridUpdateEvent();
+                        }
+                        break;
                     }
-                    break;
-                }
 
                 default: // Eraser
-                {
-                    if (inputSystem.GetButtonState(KeyCode.Mouse0) == InputSystem.ButtonState.wasJustPressed && isConstructionAvailable)
                     {
-                        structureAtLocation.OnErase();
-                        Destroy(structureAtLocation.gameObject);
+                        if (inputSystem.GetButtonState(KeyCode.Mouse0) == InputSystem.ButtonState.wasJustPressed && isConstructionAvailable)
+                        {
+                            structureAtLocation.OnErase();
+                            Destroy(structureAtLocation.gameObject);
+                        }
+                        break;
                     }
-                    break;
-                }
             }
         }
 
@@ -371,7 +371,8 @@ namespace CityBuilder
 
             if (playerHand.PreviewPrefab != null)
             {
-                if(playerHand.PreviewPrefab.name.IndexOf(structureToBuild.name) < 0){
+                if (playerHand.PreviewPrefab.name.IndexOf(structureToBuild.name) < 0)
+                {
                     // Delete previous build previews
                     Debug.Log("Destroy " + playerHand.PreviewPrefab.name);
                     Destroy(playerHand.PreviewPrefab.gameObject);
